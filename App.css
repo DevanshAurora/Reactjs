@@ -1,0 +1,132 @@
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+
+function MovieDetails() {
+  const { id } = useParams();
+
+  const [movie, setMovie] = useState({});
+  const [reviews, setReviews] = useState({});
+  const [name, setName] = useState("");
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState("");
+  const [error, setError] = useState("");
+
+  // 🎬 Fetch movie details + load saved reviews
+  useEffect(() => {
+    fetch(`https://www.omdbapi.com/?apikey=c9d23db4&i=${id}`)
+      .then((res) => res.json())
+      .then((data) => setMovie(data))
+      .catch(() => console.log("Error loading movie"));
+
+    const saved = JSON.parse(localStorage.getItem("reviews")) || {};
+    setReviews(saved);
+  }, [id]);
+
+  // 💾 Save reviews whenever updated
+  useEffect(() => {
+    localStorage.setItem("reviews", JSON.stringify(reviews));
+  }, [reviews]);
+
+  // ✍️ Add review
+  const addReview = (e) => {
+    e.preventDefault();
+
+    if (!name || !review || rating === 0) {
+      setError("⚠️ Fill all fields + select rating");
+      return;
+    }
+
+    const newReview = { name, rating, review };
+    const movieReviews = reviews[id] || [];
+
+    const updated = {
+      ...reviews,
+      [id]: [...movieReviews, newReview],
+    };
+
+    setReviews(updated);
+
+    // reset form
+    setName("");
+    setRating(0);
+    setReview("");
+    setError("");
+  };
+
+  return (
+    <div className="details">
+      {/* 🎬 POSTER */}
+      <img
+        src={
+          movie.Poster !== "N/A"
+            ? movie.Poster
+            : "https://via.placeholder.com/300"
+        }
+        alt={movie.Title}
+      />
+
+      <div>
+        {/* 🎬 INFO */}
+        <h2>{movie.Title}</h2>
+        <p><b>Year:</b> {movie.Year}</p>
+        <p><b>Genre:</b> {movie.Genre}</p>
+        <p><b>IMDB:</b> ⭐ {movie.imdbRating}</p>
+        <p>{movie.Plot}</p>
+
+        {/* ⭐ STAR RATING */}
+        <div className="stars">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <span
+              key={s}
+              onClick={() => setRating(s)}
+              className={s <= rating ? "active" : ""}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+
+        {/* ❌ ERROR */}
+        {error && <p className="error">{error}</p>}
+
+        {/* ✍️ FORM */}
+        <form className="review-form" onSubmit={addReview}>
+          <input
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <textarea
+            placeholder="Write your review..."
+            value={review}
+            onChange={(e) => setReview(e.target.value)}
+          />
+
+          <button type="submit">Submit Review</button>
+        </form>
+
+        {/* 📝 REVIEWS */}
+        <div className="reviews-container">
+          <h3>User Reviews</h3>
+
+          {(reviews[id] || []).length === 0 && (
+            <p className="empty">No reviews yet 😢</p>
+          )}
+
+          {(reviews[id] || []).map((r, i) => (
+            <div key={i} className="review-card">
+              <div className="review-header">
+                <span className="review-name">{r.name}</span>
+                <span className="review-rating">⭐ {r.rating}/5</span>
+              </div>
+              <p className="review-text">{r.review}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default MovieDetails;
